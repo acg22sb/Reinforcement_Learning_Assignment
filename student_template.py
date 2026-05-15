@@ -112,27 +112,27 @@ SMOKE_TEST_CURVE_EVAL_GAMES = 200   # Evaluation games averaged into each progre
 SMOKE_TEST_FINAL_EVAL_GAMES = 500   # Evaluation games used for the smoke-test baseline and final score
 
 # Experiment 1 settings: history-length sweep
-HISTORY_LENGTHS = (1, 2)            # History lengths to compare in Experiment 1; please expand this range for your study
+HISTORY_LENGTHS = range(1, MAX_TURNS + 1)            # History lengths to compare in Experiment 1; please expand this range for your study
 HISTORY_SWEEP_EPSILON = 0.2         # Fixed epsilon while comparing history lengths
 SWEEP_NUM_EPISODES = 10_000         # Training episodes in each run of Experiments 1 and 2
 SWEEP_RUNS = 10                     # Default `num_runs` in Experiments 1 and 2 for quick testing
-SWEEP_EVAL_GAMES = 500              # Evaluation games used to score each tested setting in Experiments 1 and 2
+SWEEP_EVAL_GAMES = 1500             # Evaluation games used to score each tested setting in Experiments 1 and 2
 
 # Experiment 2 settings: epsilon sweep
-EPSILON_SWEEP_HISTORY_LENGTH = 1    # Placeholder history length for Experiment 2; update after Experiment 1
-EPSILON_VALUES = (0.0, 0.1)         # Starting epsilon values for Experiment 2; expand in the interval [0,1)
+EPSILON_SWEEP_HISTORY_LENGTH = 3    # Placeholder history length for Experiment 2; update after Experiment 1
+EPSILON_VALUES = np.arange(0.0, 1.0, 0.05)    # Starting epsilon values for Experiment 2; expand in the interval [0,1)
 
 # Experiment 3 settings: learning curves
-CURVE_HISTORY_LENGTH = 1            # Placeholder history length for Experiment 3; update after Experiment 1
-CURVE_EPSILON = 0.0                 # Placeholder epsilon for Experiment 3; update after Experiment 2
-CURVE_NUM_EPISODES = 10_000         # Training episodes in each learning-curve run
+CURVE_HISTORY_LENGTH = 3            # Placeholder history length for Experiment 3; update after Experiment 1
+CURVE_EPSILON = 0.05                 # Placeholder epsilon for Experiment 3; update after Experiment 2
+CURVE_NUM_EPISODES = 15_000         # Training episodes in each learning-curve run
 CURVE_RUNS = 10                     # Default `num_runs` in Experiment 3 for quick testing
-CURVE_EVAL_INTERVAL = 500           # Training episodes between two points on the learning curve
-CURVE_EVAL_GAMES = 200              # Evaluation games averaged into each point on the learning curve
+CURVE_EVAL_INTERVAL = 100           # Training episodes between two points on the learning curve
+CURVE_EVAL_GAMES = 500              # Evaluation games averaged into each point on the learning curve
 
 # Example-call settings
-REPORT_SWEEP_RUNS = 10              # Suggested `num_runs` in the final Experiment 1 and 2 calls; you may want this higher than `SWEEP_RUNS` for steadier reported results
-REPORT_CURVE_RUNS = 10              # Suggested `num_runs` in the final Experiment 3 call; you may want this higher than `CURVE_RUNS` for a smoother final figure
+REPORT_SWEEP_RUNS = 100              # Suggested `num_runs` in the final Experiment 1 and 2 calls; you may want this higher than `SWEEP_RUNS` for steadier reported results
+REPORT_CURVE_RUNS = 100              # Suggested `num_runs` in the final Experiment 3 call; you may want this higher than `CURVE_RUNS` for a smoother final figure
 
 # Baseline settings
 BASELINE_EVAL_GAMES = 2_000      # Evaluation games used to estimate the random baseline shown in plots/tables
@@ -181,8 +181,13 @@ class QLearningAgent:
         # STUDENT TASK: implement epsilon-greedy action selection.
         # This is a placeholder implementation that always selects a random action.
         # --------------------------------------------------------------------
-        placeholder_action = int(np.random.randint(self.env.num_codes))
-        return placeholder_action
+
+        #Epsilon greedy action
+
+        if explore and np.random.rand() < self.epsilon:
+            return np.random.randint(self.env.num_codes)
+        else:
+            return self.Q.get_best_action(state)
 
     def update(
         self,
@@ -203,7 +208,16 @@ class QLearningAgent:
         # --------------------------------------------------------------------
         # STUDENT TASK: implement the Q-learning update
         # --------------------------------------------------------------------
-        pass
+        
+        curr_Q_value = self.Q.get(state, action)
+        if done:
+            target = reward
+        else:
+            target = reward + self.gamma * self.Q.get_max_value(next_state)
+        
+        new_Q_value = curr_Q_value + self.eta * (target - curr_Q_value)
+        self.Q.set(state, action, new_Q_value)
+        
 
     def train_episode(self) -> Tuple[float, bool, int]:
         """Train for one episode. Returns (total_reward, won, num_turns)."""
@@ -514,6 +528,27 @@ def experiment_history_length(
     # `baseline_wr`, and `baseline_turns`.
     # --------------------------------------------------------------------
 
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(x, win_means, "o-")
+    ax1.fill_between(x, win_means - win_stds, win_means + win_stds, alpha=0.2)
+    ax1.axhline(y=baseline_wr, color="red", linestyle="--", label="Random")
+    ax1.set_xlabel("History Length")
+    ax1.set_ylabel("Win Rate")
+    ax1.set_title("Win Rate vs. History Length")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax2.plot(x, turn_means, "o-")
+    ax2.fill_between(x, turn_means - turn_stds, turn_means + turn_stds, alpha=0.2)
+    ax2.axhline(y=baseline_turns, color="blue", linestyle="--", label="Random")
+    ax2.set_xlabel("History Length")
+    ax2.set_ylabel("Average Turns")
+    ax2.set_title("Average Turns vs. History Length")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig("history_length_comparison.png", dpi=150)
+
+
     return results
 
 
@@ -594,6 +629,25 @@ def experiment_epsilon(
     # `baseline_wr`, and `baseline_turns`.
     # --------------------------------------------------------------------
 
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(x, win_means, "o-")
+    ax1.fill_between(x, win_means - win_stds, win_means + win_stds, alpha=0.2)
+    ax1.axhline(y=baseline_wr, color="red", linestyle="--", label="Random")
+    ax1.set_xlabel("Epsilon")
+    ax1.set_ylabel("Win Rate")
+    ax1.set_title("Win Rate vs. Epsilon")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax2.plot(x, turn_means, "o-")
+    ax2.fill_between(x, turn_means - turn_stds, turn_means + turn_stds, alpha=0.2)
+    ax2.axhline(y=baseline_turns, color="blue", linestyle="--", label="Random")
+    ax2.set_xlabel("Epsilon")
+    ax2.set_ylabel("Average Turns")
+    ax2.set_title("Average Turns vs. Epsilon")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig("epsilon_comparison.png", dpi=150)
     return results
 
 
@@ -677,6 +731,25 @@ def experiment_learning_curves(
     # `turns_std`, `baseline_wr`, and `baseline_turns`.
     # --------------------------------------------------------------------
 
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(episodes, win_rate_mean, "o-")
+    ax1.fill_between(episodes, win_rate_mean - win_rate_std, win_rate_mean + win_rate_std, alpha=0.2)
+    ax1.axhline(y=baseline_wr, color="red", linestyle="--", label="Random")
+    ax1.set_xlabel("Episodes")
+    ax1.set_ylabel("Win Rate")
+    ax1.set_title("Win Rate vs. Episodes")
+    ax1.legend()
+    ax1.grid(True, alpha=0.3)
+    ax2.plot(episodes, turns_mean, "o-")
+    ax2.fill_between(episodes, turns_mean - turns_std, turns_mean + turns_std, alpha=0.2)
+    ax2.axhline(y=baseline_turns, color="blue", linestyle="--", label="Random")
+    ax2.set_xlabel("Episodes")
+    ax2.set_ylabel("Average Turns")
+    ax2.set_title("Average Turns vs. Episodes")
+    ax2.legend()
+    ax2.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig("learning_curve.png", dpi=150)
 
 # ============================================================================
 # ANALYSIS QUESTIONS (Answer in your report)
@@ -790,25 +863,29 @@ if __name__ == "__main__":
     # quick tests, so the separate `REPORT_*` values below can be set higher
     # for steadier final figures. Add your own plotting code in the marked
     # STUDENT TASK sections above.
-    # history_results = experiment_history_length(
-    #     history_lengths=HISTORY_LENGTHS,       # <-- update this to test a different range
-    #     epsilon=HISTORY_SWEEP_EPSILON,         # <-- keep this fixed during Experiment 1
-    #     eval_games=SWEEP_EVAL_GAMES,
-    #     num_runs=REPORT_SWEEP_RUNS,
-    #     num_episodes=SWEEP_NUM_EPISODES,
-    # )
-    # epsilon_results = experiment_epsilon(
-    #     history_length=EPSILON_SWEEP_HISTORY_LENGTH,  # <-- update this based on your Experiment 1 results
-    #     epsilon_values=EPSILON_VALUES,                # <-- expand this range for your actual study
-    #     eval_games=SWEEP_EVAL_GAMES,
-    #     num_runs=REPORT_SWEEP_RUNS,
-    #     num_episodes=SWEEP_NUM_EPISODES,
-    # )
-    # experiment_learning_curves(
-    #     history_length=CURVE_HISTORY_LENGTH,  # <-- update this based on your Experiment 1 results
-    #     epsilon=CURVE_EPSILON,                # <-- update this based on your Experiment 2 results
-    #     eval_games=CURVE_EVAL_GAMES,
-    #     eval_interval=CURVE_EVAL_INTERVAL,
-    #     num_runs=REPORT_CURVE_RUNS,
-    #     num_episodes=CURVE_NUM_EPISODES,
-    # )
+    
+    history_results = experiment_history_length(
+         history_lengths=HISTORY_LENGTHS,       # <-- update this to test a different range
+         epsilon=HISTORY_SWEEP_EPSILON,         # <-- keep this fixed during Experiment 1
+         eval_games=SWEEP_EVAL_GAMES,
+         num_runs=REPORT_SWEEP_RUNS,
+         num_episodes=SWEEP_NUM_EPISODES,
+    )
+    '''
+    epsilon_results = experiment_epsilon(
+         history_length=EPSILON_SWEEP_HISTORY_LENGTH,  # <-- update this based on your Experiment 1 results
+         epsilon_values=EPSILON_VALUES,                # <-- expand this range for your actual study
+         eval_games=SWEEP_EVAL_GAMES,
+         num_runs=REPORT_SWEEP_RUNS,
+         num_episodes=SWEEP_NUM_EPISODES,
+    )
+    
+    experiment_learning_curves(
+         history_length=CURVE_HISTORY_LENGTH,  # <-- update this based on your Experiment 1 results
+         epsilon=CURVE_EPSILON,                # <-- update this based on your Experiment 2 results
+         eval_games=CURVE_EVAL_GAMES,
+         eval_interval=CURVE_EVAL_INTERVAL,
+         num_runs=REPORT_CURVE_RUNS,
+         num_episodes=CURVE_NUM_EPISODES,
+    )
+    '''
