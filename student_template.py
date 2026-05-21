@@ -114,9 +114,9 @@ SMOKE_TEST_FINAL_EVAL_GAMES = 500   # Evaluation games used for the smoke-test b
 # Experiment 1 settings: history-length sweep
 HISTORY_LENGTHS = range(1, MAX_TURNS + 1)            # History lengths to compare in Experiment 1; please expand this range for your study
 HISTORY_SWEEP_EPSILON = 0.2         # Fixed epsilon while comparing history lengths
-SWEEP_NUM_EPISODES = 10_000         # Training episodes in each run of Experiments 1 and 2
+SWEEP_NUM_EPISODES = 15_000         # Training episodes in each run of Experiments 1 and 2
 SWEEP_RUNS = 10                     # Default `num_runs` in Experiments 1 and 2 for quick testing
-SWEEP_EVAL_GAMES = 1500             # Evaluation games used to score each tested setting in Experiments 1 and 2
+SWEEP_EVAL_GAMES = 3000             # Evaluation games used to score each tested setting in Experiments 1 and 2
 
 # Experiment 2 settings: epsilon sweep
 EPSILON_SWEEP_HISTORY_LENGTH = 3    # Placeholder history length for Experiment 2; update after Experiment 1
@@ -127,11 +127,11 @@ CURVE_HISTORY_LENGTH = 3            # Placeholder history length for Experiment 
 CURVE_EPSILON = 0.05                 # Placeholder epsilon for Experiment 3; update after Experiment 2
 CURVE_NUM_EPISODES = 15_000         # Training episodes in each learning-curve run
 CURVE_RUNS = 10                     # Default `num_runs` in Experiment 3 for quick testing
-CURVE_EVAL_INTERVAL = 100           # Training episodes between two points on the learning curve
-CURVE_EVAL_GAMES = 500              # Evaluation games averaged into each point on the learning curve
+CURVE_EVAL_INTERVAL = 1250          # Training episodes between two points on the learning curve
+CURVE_EVAL_GAMES = 1500              # Evaluation games averaged into each point on the learning curve
 
 # Example-call settings
-REPORT_SWEEP_RUNS = 100              # Suggested `num_runs` in the final Experiment 1 and 2 calls; you may want this higher than `SWEEP_RUNS` for steadier reported results
+REPORT_SWEEP_RUNS = 1000              # Suggested `num_runs` in the final Experiment 1 and 2 calls; you may want this higher than `SWEEP_RUNS` for steadier reported results
 REPORT_CURVE_RUNS = 100              # Suggested `num_runs` in the final Experiment 3 call; you may want this higher than `CURVE_RUNS` for a smoother final figure
 
 # Baseline settings
@@ -871,7 +871,6 @@ if __name__ == "__main__":
          num_runs=REPORT_SWEEP_RUNS,
          num_episodes=SWEEP_NUM_EPISODES,
     )
-    '''
     epsilon_results = experiment_epsilon(
          history_length=EPSILON_SWEEP_HISTORY_LENGTH,  # <-- update this based on your Experiment 1 results
          epsilon_values=EPSILON_VALUES,                # <-- expand this range for your actual study
@@ -888,4 +887,3 @@ if __name__ == "__main__":
          num_runs=REPORT_CURVE_RUNS,
          num_episodes=CURVE_NUM_EPISODES,
     )
-    '''
